@@ -16,7 +16,19 @@ export const DeviceSettings = observer(({ frameId }: { frameId: string }) => {
             console.error('No frame view found');
             return;
         }
-        frameData.view.getTheme().then((theme) => setTheme(theme));
+        
+        // Check if the frame view has the required method (penpal connection ready)
+        if (!frameData.view.getTheme) {
+            console.warn('getTheme method not available yet, penpal connection not ready');
+            return;
+        }
+        
+        frameData.view.getTheme()
+            .then((theme) => setTheme(theme))
+            .catch((error) => {
+                console.error('Failed to get theme:', error);
+                setTheme(SystemTheme.SYSTEM);
+            });
     }, [frameData]);
 
     if (!frameData) {
@@ -31,11 +43,24 @@ export const DeviceSettings = observer(({ frameId }: { frameId: string }) => {
 
         if (!frameData?.view) {
             console.error('No frame view found');
+            setTheme(previousTheme);
             return;
         }
 
-        const success = await frameData?.view.setTheme(newTheme);
-        if (!success) {
+        if (!frameData.view.setTheme) {
+            toast.error('Theme change not available yet, please wait for the page to fully load');
+            setTheme(previousTheme);
+            return;
+        }
+
+        try {
+            const success = await frameData.view.setTheme(newTheme);
+            if (!success) {
+                toast.error('Failed to change theme');
+                setTheme(previousTheme);
+            }
+        } catch (error) {
+            console.error('Error changing theme:', error);
             toast.error('Failed to change theme');
             setTheme(previousTheme);
         }

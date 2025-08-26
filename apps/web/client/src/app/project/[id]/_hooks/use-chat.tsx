@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useEditorEngine } from '@/components/store/editor';
 import { handleToolCall } from '@/components/tools';
@@ -8,7 +8,7 @@ import { ChatType } from '@onlook/models';
 import type { Message } from 'ai';
 import { observer } from 'mobx-react-lite';
 import { usePostHog } from 'posthog-js/react';
-import { createContext, useContext, useRef } from 'react';
+import { createContext, useContext, useRef, useState, useEffect } from 'react';
 
 type ExtendedUseChatHelpers = UseChatHelpers & { sendMessage: (type: ChatType) => Promise<string | null | undefined> };
 const ChatContext = createContext<ExtendedUseChatHelpers | null>(null);
@@ -87,6 +87,19 @@ export const ChatProvider = observer(({ children }: { children: React.ReactNode 
 export function useChatContext() {
     const context = useContext(ChatContext);
     if (!context) throw new Error('useChatContext must be used within a ChatProvider');
-    const isWaiting = context.status === 'streaming' || context.status === 'submitted';
-    return { ...context, isWaiting };
+    const [forceStopped, setForceStopped] = useState(false);
+    useEffect(() => {
+        if (context.status === 'submitted') {
+            setForceStopped(false);
+        }
+    }, [context.status]);
+
+    const isWaiting =
+        (context.status === 'streaming' || context.status === 'submitted') && !forceStopped;
+    const forceStop = () => {
+        context.stop();
+        setForceStopped(true);
+    };
+
+    return { ...context, isWaiting, stop: forceStop };
 }

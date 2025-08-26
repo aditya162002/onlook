@@ -33,8 +33,16 @@ export const GestureScreen = observer(({ frame, isResizing }: { frame: WebFrame,
             try {
                 const frameData = getFrameData();
                 if (!frameData?.view) {
-                    throw new Error('Frame view not found');
+                    // Silently ignore if frame view isn't ready yet (during initialization)
+                    return;
                 }
+                
+                // Check if the frame view has the required method (penpal connection ready)
+                if (!frameData.view.getElementAtLoc) {
+                    // Frame is registered but penpal connection isn't ready yet
+                    return;
+                }
+                
                 const pos = getRelativeMousePosition(e);
                 const shouldGetStyle = [MouseAction.MOUSE_DOWN, MouseAction.DOUBLE_CLICK].includes(
                     action,
@@ -45,7 +53,8 @@ export const GestureScreen = observer(({ frame, isResizing }: { frame: WebFrame,
                     shouldGetStyle,
                 );
                 if (!el) {
-                    throw new Error('No element found');
+                    // Element not found is not an error condition, just ignore
+                    return;
                 }
 
                 switch (action) {

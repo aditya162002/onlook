@@ -248,20 +248,22 @@ export const WebFrameComponent = observer(
                 isLoading: () => iframe.contentDocument?.readyState !== 'complete',
             };
 
-            if (!penpalChild) {
-                console.warn(
-                    `${PENPAL_PARENT_CHANNEL} (${frame.id}) - Failed to setup penpal connection: iframeRemote is null`,
-                );
-                return Object.assign(iframe, syncMethods, remoteMethods) as WebFrameView;
-            }
-
-            // Register the iframe with the editor engine
-            editorEngine.frames.registerView(frame, iframe as WebFrameView);
-
-            return Object.assign(iframe, {
+            const webFrameView = Object.assign(iframe, {
                 ...syncMethods,
                 ...remoteMethods,
-            });
+            }) as WebFrameView;
+
+            // Always register the iframe with the editor engine, even if penpal isn't ready yet
+            // This prevents "Frame view not found" errors during the connection setup phase
+            editorEngine.frames.registerView(frame, webFrameView);
+
+            if (!penpalChild) {
+                console.warn(
+                    `${PENPAL_PARENT_CHANNEL} (${frame.id}) - Penpal connection not ready yet, frame registered with limited functionality`,
+                );
+            }
+
+            return webFrameView;
         }, [penpalChild, frame, iframeRef]);
 
         useEffect(() => {

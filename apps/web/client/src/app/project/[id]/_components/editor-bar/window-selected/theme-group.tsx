@@ -15,8 +15,20 @@ export function ThemeGroup({ frameData }: { frameData: FrameData }) {
                 return;
             }
 
-            const theme = await frameData.view.getTheme();
-            setTheme(theme);
+            // Check if the frame view has the required method (penpal connection ready)
+            if (!frameData.view.getTheme) {
+                console.warn('getTheme method not available yet, penpal connection not ready');
+                return;
+            }
+
+            try {
+                const theme = await frameData.view.getTheme();
+                setTheme(theme);
+            } catch (error) {
+                console.error('Failed to get theme:', error);
+                // Fallback to system theme if there's an error
+                setTheme(SystemTheme.SYSTEM);
+            }
         }
         void getTheme();
     }, [frameData]);
@@ -24,8 +36,21 @@ export function ThemeGroup({ frameData }: { frameData: FrameData }) {
     async function changeTheme(newTheme: SystemTheme) {
         const previousTheme = theme;
         setTheme(newTheme);
-        const success = await frameData.view?.setTheme(newTheme);
-        if (!success) {
+        
+        if (!frameData.view?.setTheme) {
+            toast.error('Theme change not available yet, please wait for the page to fully load');
+            setTheme(previousTheme);
+            return;
+        }
+        
+        try {
+            const success = await frameData.view.setTheme(newTheme);
+            if (!success) {
+                toast.error('Failed to change theme');
+                setTheme(previousTheme);
+            }
+        } catch (error) {
+            console.error('Error changing theme:', error);
             toast.error('Failed to change theme');
             setTheme(previousTheme);
         }
